@@ -1,0 +1,79 @@
+# Task ID: 6
+# Title: Implement Quiz Generation Logic
+# Status: pending
+# Dependencies: 3, 4
+# Priority: high
+# Description: Develop the backend logic to generate quizzes using templates and OpenAI.
+# Details:
+1. Create a service in lib/services/quiz-service.ts to handle quiz generation:
+   ```typescript
+   import { db } from '@/lib/db';
+   import { quizzes, questions, templates } from '@/lib/db/schema';
+   import { generateQuiz as generateQuizWithAI } from '@/lib/openai';
+   import { eq, and } from 'drizzle-orm';
+   
+   export async function generateQuiz(userId: string, topic: string, skillLevel: string) {
+     // Check if template exists for this topic and skill level
+     const existingTemplates = await db.select()
+       .from(templates)
+       .where(and(
+         eq(templates.topic, topic.toLowerCase()),
+         eq(templates.skillLevel, skillLevel.toLowerCase())
+       ))
+       .limit(1);
+     
+     let quizData;
+     
+     if (existingTemplates.length > 0) {
+       // Use template to generate quiz
+       const template = existingTemplates[0];
+       quizData = {
+         questions: template.questions.map(q => JSON.parse(q))
+       };
+     } else {
+       // Use OpenAI to generate quiz
+       quizData = await generateQuizWithAI(topic, skillLevel);
+       
+       // Optionally save as new template if it's a common topic
+       // This would require additional logic to determine "common" topics
+     }
+     
+     // Create quiz record
+     const [newQuiz] = await db.insert(quizzes)
+       .values({
+         userId,
+         topic,
+         skillLevel
+       })
+       .returning();
+     
+     // Create question records
+     const questionRecords = quizData.questions.map(q => ({
+       quizId: newQuiz.id,
+       question: q.question,
+       options: q.options || null,
+       correctAnswer: q.correctAnswer
+     }));
+     
+     await db.insert(questions).values(questionRecords);
+     
+     return {
+       id: newQuiz.id,
+       questions: quizData.questions
+     };
+   }
+   ```
+2. Create an API endpoint in app/api/quiz/generate/route.ts to handle quiz generation requests
+3. Implement logic to check remaining quizzes in the user's trial
+4. Add logic to decrement the remaining quizzes count after generation
+5. Implement caching for frequently requested topics
+6. Add error handling for failed quiz generation
+7. Set up logging for quiz generation metrics
+
+# Test Strategy:
+1. Test quiz generation with both template-based and AI-based approaches
+2. Verify that quiz data is correctly stored in the database
+3. Test the trial quota system for free users
+4. Validate error handling for edge cases
+5. Test performance with various topics and skill levels
+6. Verify that caching works correctly for repeated topics

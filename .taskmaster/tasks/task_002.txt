@@ -1,0 +1,35 @@
+# Task ID: 2
+# Title: Integrate Clerk Authentication
+# Status: done
+# Dependencies: 1
+# Priority: high
+# Description: Set up Clerk for user authentication, including sign-up, sign-in, and session management.
+# Details:
+1. Install Clerk SDK: `npm install @clerk/nextjs`
+2. Create a Clerk account and set up a new application
+3. Configure environment variables in .env.local:
+   ```
+   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
+   CLERK_SECRET_KEY=sk_...
+   ```
+4. Wrap the application with ClerkProvider in app/layout.tsx
+5. Create middleware.ts to protect routes:
+   ```typescript
+   import { authMiddleware } from '@clerk/nextjs';
+   export default authMiddleware({
+     publicRoutes: ['/', '/api/webhook/clerk']
+   });
+   export const config = {
+     matcher: ['/((?!.*\\..*|_next).*)', '/', '/(api|trpc)(.*)'],
+   };
+   ```
+6. Implement sign-up and sign-in pages using Clerk components
+7. Create user onboarding flow after successful sign-up
+8. Set up webhook to track user events in Supabase
+
+# Test Strategy:
+1. Test user registration flow with valid and invalid inputs
+2. Verify sign-in functionality with correct and incorrect credentials
+3. Confirm that protected routes redirect unauthenticated users
+4. Test session persistence across page refreshes
+5. Validate that user data is correctly stored in Clerk and synced to Supabase

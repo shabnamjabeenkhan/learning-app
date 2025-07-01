@@ -1,0 +1,62 @@
+# Task ID: 14
+# Title: Set Up Analytics and Error Tracking
+# Status: pending
+# Dependencies: 1, 2
+# Priority: medium
+# Description: Integrate Plausible for analytics and Sentry for error tracking.
+# Details:
+1. Set up Plausible Analytics:
+   - Create a Plausible account and set up a new site
+   - Add the Plausible script to app/layout.tsx:
+   ```jsx
+   <Script
+     defer
+     data-domain="your-domain.com"
+     src="https://plausible.io/js/script.js"
+   />
+   ```
+   - Configure custom events for important user actions
+2. Set up Sentry for error tracking:
+   - Install Sentry SDK: `npm install @sentry/nextjs`
+   - Initialize Sentry in next.config.js:
+   ```javascript
+   const { withSentryConfig } = require('@sentry/nextjs');
+   
+   const nextConfig = {
+     // your existing config
+   };
+   
+   module.exports = withSentryConfig(
+     nextConfig,
+     {
+       silent: true,
+       org: "your-org",
+       project: "edubot-ai",
+     },
+     {
+       widenClientFileUpload: true,
+       transpileClientSDK: true,
+       tunnelRoute: "/monitoring",
+       hideSourceMaps: true,
+       disableLogger: true,
+     }
+   );
+   ```
+   - Create sentry.client.config.js and sentry.server.config.js files
+   - Set up environment variables for Sentry
+3. Implement custom error boundaries for graceful error handling
+4. Set up performance monitoring for critical paths
+5. Create custom analytics events for key user actions:
+   - Quiz generation
+   - Quiz completion
+   - Payment conversion
+   - Trial expiration
+6. Implement hCaptcha for spam protection on sign-up and quiz generation
+
+# Test Strategy:
+1. Verify that Plausible is correctly tracking page views
+2. Test custom event tracking for key user actions
+3. Validate that Sentry captures and reports errors
+4. Test error boundaries with simulated errors
+5. Verify that performance monitoring is working
+6. Test hCaptcha integration for spam protection

@@ -1,0 +1,68 @@
+# Task ID: 10
+# Title: Implement Stripe Integration for Payments
+# Status: pending
+# Dependencies: 2, 3
+# Priority: high
+# Description: Set up Stripe for handling payments and subscriptions.
+# Details:
+1. Install Stripe SDK: `npm install stripe @stripe/stripe-js`
+2. Set up environment variables in .env.local:
+   ```
+   STRIPE_SECRET_KEY=sk_...
+   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_...
+   STRIPE_WEBHOOK_SECRET=whsec_...
+   ```
+3. Create a Stripe client in lib/stripe.ts:
+   ```typescript
+   import Stripe from 'stripe';
+   
+   export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+     apiVersion: '2023-10-16',
+     appInfo: {
+       name: 'EduBot AI',
+       version: '1.0.0'
+     }
+   });
+   ```
+4. Create API routes for payment handling:
+   - app/api/stripe/create-checkout/route.ts for creating checkout sessions
+   - app/api/stripe/webhook/route.ts for handling webhooks
+5. Set up product and price in Stripe dashboard:
+   - Monthly subscription option
+   - One-time payment option
+6. Implement checkout flow:
+   ```typescript
+   export async function createCheckoutSession(userId: string, priceId: string) {
+     const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+     
+     if (!user[0]) throw new Error('User not found');
+     
+     const session = await stripe.checkout.sessions.create({
+       customer_email: user[0].email,
+       line_items: [
+         {
+           price: priceId,
+           quantity: 1
+         }
+       ],
+       mode: priceId.includes('one_time') ? 'payment' : 'subscription',
+       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/payment/canceled`,
+       metadata: {
+         userId
+       }
+     });
+     
+     return session;
+   }
+   ```
+7. Implement webhook handler to update user status after successful payment
+8. Add error handling for payment failures
+
+# Test Strategy:
+1. Test checkout flow with test cards in Stripe test mode
+2. Verify that webhook handling correctly updates user status
+3. Test both subscription and one-time payment options
+4. Validate error handling for payment failures
+5. Test checkout session expiration handling
+6. Verify that users can access premium features after successful payment

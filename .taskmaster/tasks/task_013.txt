@@ -1,0 +1,55 @@
+# Task ID: 13
+# Title: Integrate Plunk for Email Notifications
+# Status: pending
+# Dependencies: 2, 12
+# Priority: medium
+# Description: Set up Plunk for sending email notifications to users.
+# Details:
+1. Install Plunk SDK: `npm install @plunk/node`
+2. Set up environment variables in .env.local:
+   ```
+   PLUNK_API_KEY=your-api-key
+   PLUNK_API_SECRET=your-api-secret
+   ```
+3. Create a Plunk client in lib/plunk.ts:
+   ```typescript
+   import { Plunk } from '@plunk/node';
+   
+   export const plunk = new Plunk({
+     apiKey: process.env.PLUNK_API_KEY!,
+     apiSecret: process.env.PLUNK_API_SECRET!
+   });
+   ```
+4. Create email templates for:
+   - Welcome email after sign-up
+   - Trial expiration reminder
+   - Payment confirmation
+   - Quiz completion summary
+5. Implement email sending functions:
+   ```typescript
+   export async function sendWelcomeEmail(email: string, name: string) {
+     return plunk.emails.send({
+       to: email,
+       subject: 'Welcome to EduBot AI!',
+       body: `<h1>Welcome to EduBot AI, ${name}!</h1><p>Start your learning journey today with our AI-powered quizzes.</p>`,
+     });
+   }
+   
+   export async function sendTrialExpirationEmail(email: string, name: string) {
+     return plunk.emails.send({
+       to: email,
+       subject: 'Your EduBot AI Trial is Ending Soon',
+       body: `<h1>Your trial is ending soon, ${name}!</h1><p>Upgrade now to continue your learning journey.</p>`,
+     });
+   }
+   ```
+6. Set up webhook handlers for email events (opens, clicks, etc.)
+7. Implement scheduled emails for trial expiration reminders
+
+# Test Strategy:
+1. Test email sending for each template
+2. Verify that emails are correctly formatted and personalized
+3. Test webhook handling for email events
+4. Validate that scheduled emails are sent at the correct time
+5. Test email rendering across different email clients
+6. Verify that unsubscribe links work correctly

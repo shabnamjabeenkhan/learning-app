@@ -1,0 +1,310 @@
+# Task ID: 16
+# Title: Implement On-Demand AI Explanations Feature
+# Status: pending
+# Dependencies: 2, 4
+# Priority: medium
+# Description: Create a feature that allows users to ask the AI for explanations of any topic or concept they don't understand, providing clear, tailored explanations in simple language.
+# Details:
+1. Create a new component in app/components/ExplanationDialog.tsx:
+   ```typescript
+   import { useState } from 'react';
+   import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+   import { Button } from '@/components/ui/button';
+   import { Textarea } from '@/components/ui/textarea';
+   import { Loader2 } from 'lucide-react';
+   
+   export function ExplanationDialog({ open, onOpenChange }) {
+     const [question, setQuestion] = useState('');
+     const [explanation, setExplanation] = useState('');
+     const [isLoading, setIsLoading] = useState(false);
+     
+     async function handleSubmit(e) {
+       e.preventDefault();
+       setIsLoading(true);
+       
+       try {
+         const response = await fetch('/api/explanations', {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({ question })
+         });
+         
+         if (!response.ok) throw new Error('Failed to get explanation');
+         
+         const data = await response.json();
+         setExplanation(data.explanation);
+       } catch (error) {
+         console.error('Error getting explanation:', error);
+       } finally {
+         setIsLoading(false);
+       }
+     }
+     
+     return (
+       <Dialog open={open} onOpenChange={onOpenChange}>
+         <DialogContent className="sm:max-w-[600px]">
+           <DialogHeader>
+             <DialogTitle>Ask for an Explanation</DialogTitle>
+           </DialogHeader>
+           <form onSubmit={handleSubmit}>
+             <Textarea 
+               placeholder="What would you like explained? (e.g., 'What are components in React?')"
+               value={question}
+               onChange={(e) => setQuestion(e.target.value)}
+               className="min-h-[100px]"
+             />
+             <Button type="submit" className="mt-4" disabled={isLoading || !question.trim()}>
+               {isLoading ? (
+                 <>
+                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                   Getting explanation...
+                 </>
+               ) : 'Get Explanation'}
+             </Button>
+           </form>
+           
+           {explanation && (
+             <div className="mt-4 p-4 bg-muted rounded-md">
+               <h3 className="font-medium mb-2">Explanation:</h3>
+               <div className="whitespace-pre-wrap">{explanation}</div>
+             </div>
+           )}
+         </DialogContent>
+       </Dialog>
+     );
+   }
+   ```
+
+2. Add a floating action button to the layout in app/dashboard/layout.tsx:
+   ```typescript
+   import { ExplanationButton } from '@/components/ExplanationButton';
+   
+   export default function DashboardLayout({ children }) {
+     return (
+       <div className="relative min-h-screen">
+         {children}
+         <ExplanationButton />
+       </div>
+     );
+   }
+   ```
+
+3. Create the ExplanationButton component in app/components/ExplanationButton.tsx:
+   ```typescript
+   import { useState } from 'react';
+   import { Button } from '@/components/ui/button';
+   import { HelpCircle } from 'lucide-react';
+   import { ExplanationDialog } from './ExplanationDialog';
+   
+   export function ExplanationButton() {
+     const [dialogOpen, setDialogOpen] = useState(false);
+     
+     return (
+       <>
+         <Button
+           onClick={() => setDialogOpen(true)}
+           className="fixed bottom-6 right-6 rounded-full h-14 w-14 shadow-lg"
+           size="icon"
+           variant="default"
+         >
+           <HelpCircle className="h-6 w-6" />
+         </Button>
+         <ExplanationDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+       </>
+     );
+   }
+   ```
+
+4. Create an API endpoint for explanations in app/api/explanations/route.ts:
+   ```typescript
+   import { NextResponse } from 'next/server';
+   import { auth } from '@clerk/nextjs';
+   import { generateExplanation } from '@/lib/openai';
+   
+   export async function POST(req: Request) {
+     try {
+       const { userId } = auth();
+       if (!userId) {
+         return new NextResponse('Unauthorized', { status: 401 });
+       }
+       
+       const { question } = await req.json();
+       if (!question || typeof question !== 'string') {
+         return new NextResponse('Invalid request', { status: 400 });
+       }
+       
+       const explanation = await generateExplanation(question);
+       
+       return NextResponse.json({ explanation });
+     } catch (error) {
+       console.error('Explanation error:', error);
+       return new NextResponse('Internal error', { status: 500 });
+     }
+   }
+   ```
+
+5. Add the explanation generation function to lib/openai.ts:
+   ```typescript
+   export async function generateExplanation(question: string) {
+     const response = await openai.chat.completions.create({
+       model: 'gpt-4o-mini',
+       messages: [
+         {
+           role: 'system',
+           content: 'You are a helpful educational assistant. Provide clear, concise explanations of concepts in simple language. Use analogies and examples where appropriate. Keep explanations under 300 words unless the topic requires more detail.'
+         },
+         {
+           role: 'user',
+           content: question
+         }
+       ],
+       temperature: 0.7,
+       max_tokens: 1000
+     });
+     
+     return response.choices[0].message.content;
+   }
+   ```
+
+6. Update the user interface to include a help icon in the navigation bar as an alternative entry point:
+   ```typescript
+   // In app/components/Navbar.tsx
+   import { HelpCircle } from 'lucide-react';
+   import { Button } from '@/components/ui/button';
+   import { useState } from 'react';
+   import { ExplanationDialog } from './ExplanationDialog';
+   
+   export function Navbar() {
+     const [dialogOpen, setDialogOpen] = useState(false);
+     
+     return (
+       <nav className="border-b py-4">
+         <div className="container flex justify-between items-center">
+           <Logo />
+           <div className="flex items-center gap-4">
+             <Button
+               onClick={() => setDialogOpen(true)}
+               variant="ghost"
+               size="icon"
+             >
+               <HelpCircle className="h-5 w-5" />
+             </Button>
+             {/* Other navbar items */}
+           </div>
+         </div>
+         <ExplanationDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+       </nav>
+     );
+   }
+   ```
+
+7. Add usage tracking to monitor API usage:
+   ```typescript
+   // In lib/openai.ts
+   import { db } from '@/lib/db';
+   import { explanationLogs } from '@/lib/db/schema';
+   
+   export async function generateExplanation(question: string, userId: string) {
+     const startTime = Date.now();
+     
+     const response = await openai.chat.completions.create({
+       // ... existing configuration
+     });
+     
+     const explanation = response.choices[0].message.content;
+     const tokensUsed = response.usage?.total_tokens || 0;
+     
+     // Log the explanation request
+     await db.insert(explanationLogs).values({
+       userId,
+       question,
+       tokensUsed,
+       timestamp: new Date(),
+       responseTime: Date.now() - startTime
+     });
+     
+     return explanation;
+   }
+   ```
+
+8. Add a new table to the database schema in lib/db/schema.ts:
+   ```typescript
+   export const explanationLogs = pgTable('explanation_logs', {
+     id: serial('id').primaryKey(),
+     userId: text('user_id').notNull(),
+     question: text('question').notNull(),
+     tokensUsed: integer('tokens_used').notNull(),
+     timestamp: timestamp('timestamp').notNull().defaultNow(),
+     responseTime: integer('response_time').notNull()
+   });
+   ```
+
+# Test Strategy:
+1. Test the explanation dialog UI:
+   - Verify that the dialog opens correctly from both the floating button and navbar icon
+   - Test responsive design on different screen sizes
+   - Ensure the dialog closes properly
+   - Validate form validation for empty questions
+
+2. Test the explanation generation API:
+   - Test with various types of questions (technical, non-technical, short, long)
+   - Verify that explanations are clear and tailored to the question
+   - Test with edge cases like very complex topics or ambiguous questions
+   - Validate error handling for API failures
+   - Test authentication requirements
+
+3. Test integration with OpenAI:
+   - Verify that the correct model and parameters are being used
+   - Test response formatting and handling
+   - Validate token usage tracking
+   - Test error handling for rate limits or API downtime
+
+4. Test performance:
+   - Measure response times for different types of questions
+   - Test under load with multiple concurrent requests
+   - Verify that the UI shows appropriate loading states
+
+5. Test user experience:
+   - Conduct user testing to ensure explanations are helpful and clear
+   - Verify that the feature is discoverable
+   - Test accessibility of the dialog and buttons
+   - Ensure keyboard navigation works correctly
+
+6. Test database logging:
+   - Verify that explanation requests are correctly logged
+   - Test that all required fields are captured
+   - Validate that token usage is accurately recorded
+
+7. Test across different browsers and devices to ensure consistent functionality.
+
+# Subtasks:
+## 1. Create ExplanationDialog and ExplanationButton Components [pending]
+### Dependencies: None
+### Description: Implement the UI components for the explanation feature, including the dialog for asking questions and the floating action button to trigger it.
+### Details:
+Create two components: ExplanationDialog.tsx to handle user input and display AI responses, and ExplanationButton.tsx for the floating action button. The dialog should include a textarea for questions, a submit button with loading state, and a section to display the explanation. The button should be positioned in the bottom-right corner of the screen and open the dialog when clicked.
+
+## 2. Implement OpenAI Integration for Explanations [pending]
+### Dependencies: None
+### Description: Create the OpenAI integration function that will generate explanations based on user questions.
+### Details:
+Add a generateExplanation function to lib/openai.ts that takes a question string as input and returns an AI-generated explanation. Configure the OpenAI chat completions API with appropriate system prompts to generate educational, clear explanations under 300 words. Use gpt-4o-mini model with temperature 0.7 and max_tokens 1000.
+
+## 3. Create API Endpoint for Explanations [pending]
+### Dependencies: 16.2
+### Description: Implement the backend API endpoint that will handle explanation requests and connect to the OpenAI service.
+### Details:
+Create app/api/explanations/route.ts with a POST handler that validates the user is authenticated using Clerk, extracts the question from the request body, calls the generateExplanation function, and returns the explanation as JSON. Include proper error handling for unauthorized access, invalid requests, and server errors.
+
+## 4. Integrate Explanation Feature into Application Layout [pending]
+### Dependencies: 16.1
+### Description: Add the explanation button to the dashboard layout and navbar to provide multiple entry points for the feature.
+### Details:
+Update app/dashboard/layout.tsx to include the ExplanationButton component. Also modify the Navbar component to include a help icon that opens the explanation dialog, providing an alternative way to access the feature. Ensure both implementations correctly manage the dialog's open state.
+
+## 5. Implement Usage Tracking and Database Schema [pending]
+### Dependencies: 16.2, 16.3
+### Description: Create a database schema for tracking explanation usage and implement logging functionality.
+### Details:
+Add an explanationLogs table to the database schema in lib/db/schema.ts with fields for id, userId, question, tokensUsed, timestamp, and responseTime. Update the generateExplanation function to log each request with the user ID, question text, tokens used, timestamp, and response time. Modify the API endpoint to pass the userId to the generateExplanation function.
+

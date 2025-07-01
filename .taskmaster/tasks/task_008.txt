@@ -1,0 +1,95 @@
+# Task ID: 8
+# Title: Implement Quiz Scoring and Feedback Generation
+# Status: pending
+# Dependencies: 6, 7
+# Priority: high
+# Description: Develop the logic for scoring quizzes and generating personalized feedback.
+# Details:
+1. Create a service in lib/services/scoring-service.ts to handle quiz scoring:
+   ```typescript
+   import { db } from '@/lib/db';
+   import { quizzes, questions } from '@/lib/db/schema';
+   import { generateFeedback } from '@/lib/openai';
+   import { eq } from 'drizzle-orm';
+   
+   export async function scoreQuiz(quizId: number, answers: Record<number, string>) {
+     // Fetch quiz questions with correct answers
+     const quizQuestions = await db.select()
+       .from(questions)
+       .where(eq(questions.quizId, quizId));
+     
+     // Score each question
+     let correctCount = 0;
+     const scoredQuestions = [];
+     
+     for (const question of quizQuestions) {
+       const userAnswer = answers[question.id];
+       const isCorrect = userAnswer?.toLowerCase() === question.correctAnswer.toLowerCase();
+       
+       if (isCorrect) correctCount++;
+       
+       // Update question with user's answer and score
+       await db.update(questions)
+         .set({
+           userAnswer,
+           isCorrect
+         })
+         .where(eq(questions.id, question.id));
+       
+       scoredQuestions.push({
+         ...question,
+         userAnswer,
+         isCorrect
+       });
+     }
+     
+     // Calculate score percentage
+     const score = Math.round((correctCount / quizQuestions.length) * 100);
+     
+     // Generate personalized feedback
+     const quizData = await db.select().from(quizzes).where(eq(quizzes.id, quizId)).limit(1);
+     const quiz = quizData[0];
+     
+     const feedbackData = {
+       topic: quiz.topic,
+       skillLevel: quiz.skillLevel,
+       score,
+       questions: scoredQuestions.map(q => ({
+         question: q.question,
+         correctAnswer: q.correctAnswer,
+         userAnswer: q.userAnswer,
+         isCorrect: q.isCorrect
+       }))
+     };
+     
+     const recommendation = await generateFeedback(feedbackData);
+     
+     // Update quiz with score and recommendation
+     await db.update(quizzes)
+       .set({
+         score,
+         recommendation
+       })
+       .where(eq(quizzes.id, quizId));
+     
+     return {
+       score,
+       recommendation,
+       questions: scoredQuestions
+     };
+   }
+   ```
+2. Create an API endpoint in app/api/quiz/[id]/score/route.ts to handle quiz scoring requests
+3. Implement logic to compare user answers with correct answers
+4. Add support for partial matching in short-answer questions
+5. Implement feedback generation based on quiz results
+6. Add error handling for failed scoring or feedback generation
+7. Set up logging for scoring metrics
+
+# Test Strategy:
+1. Test scoring with various answer combinations
+2. Verify that partial matching works correctly for short-answer questions
+3. Test feedback generation with different quiz results
+4. Validate that quiz data is correctly updated in the database
+5. Test error handling for edge cases
+6. Verify that the scoring is accurate across different question types

@@ -1,0 +1,29 @@
+# Task ID: 1
+# Title: Setup Next.js 15 Project with Tailwind CSS
+# Status: done
+# Dependencies: None
+# Priority: high
+# Description: Initialize the project repository with Next.js 15 using App Router and configure Tailwind CSS for styling.
+# Details:
+1. Create a new Next.js project using `npx create-next-app@latest edubot-ai`
+2. Select the following options during setup:
+   - Use TypeScript: Yes
+   - Use ESLint: Yes
+   - Use Tailwind CSS: Yes
+   - Use App Router: Yes
+   - Import alias: Yes (use @/ as the default)
+3. Set up project structure with the following directories:
+   - app/ (for App Router pages)
+   - components/ (for reusable UI components)
+   - lib/ (for utility functions)
+   - styles/ (for global styles)
+4. Configure Tailwind CSS with a custom theme that matches the product branding
+5. Set up basic layout components (Header, Footer, Layout)
+6. Configure ESLint and Prettier for code quality
+7. Set up Git repository and initial commit
+
+# Test Strategy:
+1. Verify that the Next.js application runs without errors using `npm run dev`
+2. Confirm that Tailwind CSS is properly configured by testing a few utility classes
+3. Ensure the project structure follows best practices for Next.js 15 App Router
+4. Validate that ESLint and Prettier are working correctly

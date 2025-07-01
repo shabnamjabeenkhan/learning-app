@@ -10,5 +10,6 @@ export const users = pgTable('user', {
   gender: text('gender'),
   profileImageUrl: text('profile_image_url'),
   userId: varchar('user_id').unique().notNull().$defaultFn(() => createId()),
-  subscription: text('subscription')
+  subscription: text('subscription'),
+  phoneNumber: varchar('phone_number', { length: 15 })
 }); 

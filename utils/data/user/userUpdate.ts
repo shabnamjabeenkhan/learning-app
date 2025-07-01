@@ -3,6 +3,7 @@ import { userUpdateProps } from '@/utils/types';
 import { createDirectClient } from '@/lib/drizzle';
 import { users } from '@/db/schema/users';
 import { eq } from 'drizzle-orm';
+import { isAuthorized } from '@/utils/data/user/isAuthorized';
 
 export const userUpdate = async ({
   email,
@@ -11,6 +12,9 @@ export const userUpdate = async ({
   profile_image_url,
   user_id,
 }: userUpdateProps) => {
+  const { authorized, message } = await isAuthorized(user_id);
+  if (!authorized) throw new Error(message);
+
   try {
     const db = createDirectClient();
     

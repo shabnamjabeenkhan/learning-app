@@ -1,0 +1,88 @@
+# Task ID: 12
+# Title: Implement Trial Management System
+# Status: pending
+# Dependencies: 2, 3, 6
+# Priority: high
+# Description: Develop the logic for managing free trial usage and expiration.
+# Details:
+1. Create a service in lib/services/trial-service.ts to handle trial management:
+   ```typescript
+   import { db } from '@/lib/db';
+   import { users } from '@/lib/db/schema';
+   import { eq } from 'drizzle-orm';
+   import { addDays } from 'date-fns';
+   
+   export async function initializeTrial(userId: string) {
+     const trialExpiresAt = addDays(new Date(), 3); // 3-day trial
+     
+     await db.update(users)
+       .set({
+         quizzesRemaining: 5,
+         trialExpiresAt
+       })
+       .where(eq(users.id, userId));
+     
+     return { quizzesRemaining: 5, trialExpiresAt };
+   }
+   
+   export async function decrementQuizCount(userId: string) {
+     const user = await db.select()
+       .from(users)
+       .where(eq(users.id, userId))
+       .limit(1);
+     
+     if (!user[0]) throw new Error('User not found');
+     
+     // If user is paid, don't decrement
+     if (user[0].isPaid) return { quizzesRemaining: Infinity };
+     
+     // If trial expired, return 0
+     if (user[0].trialExpiresAt && new Date() > new Date(user[0].trialExpiresAt)) {
+       return { quizzesRemaining: 0 };
+     }
+     
+     // Decrement quiz count, minimum 0
+     const quizzesRemaining = Math.max(0, (user[0].quizzesRemaining || 0) - 1);
+     
+     await db.update(users)
+       .set({ quizzesRemaining })
+       .where(eq(users.id, userId));
+     
+     return { quizzesRemaining };
+   }
+   
+   export async function checkTrialStatus(userId: string) {
+     const user = await db.select()
+       .from(users)
+       .where(eq(users.id, userId))
+       .limit(1);
+     
+     if (!user[0]) throw new Error('User not found');
+     
+     // If user is paid, they have unlimited quizzes
+     if (user[0].isPaid) return { quizzesRemaining: Infinity, isActive: true };
+     
+     // Check if trial has expired
+     const isExpired = user[0].trialExpiresAt && new Date() > new Date(user[0].trialExpiresAt);
+     const quizzesRemaining = isExpired ? 0 : user[0].quizzesRemaining || 0;
+     
+     return {
+       quizzesRemaining,
+       isActive: quizzesRemaining > 0 && !isExpired
+     };
+   }
+   ```
+2. Create API endpoints to check trial status and initialize trial
+3. Implement middleware to check trial status before quiz generation
+4. Add logic to redirect to paywall when trial is expired or quota is reached
+5. Implement countdown display for remaining quizzes
+6. Add notifications when trial is about to expire
+7. Set up automatic trial initialization for new users
+
+# Test Strategy:
+1. Test trial initialization for new users
+2. Verify that quiz count decrements correctly after each quiz
+3. Test trial expiration based on date
+4. Validate that paid users have unlimited quizzes
+5. Test redirection to paywall when trial expires
+6. Verify that notifications are displayed correctly

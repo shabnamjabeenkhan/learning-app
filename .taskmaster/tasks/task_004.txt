@@ -1,0 +1,69 @@
+# Task ID: 4
+# Title: Implement OpenAI Integration
+# Status: pending
+# Dependencies: 1
+# Priority: high
+# Description: Set up OpenAI GPT-4o mini API integration for quiz generation and feedback.
+# Details:
+1. Install OpenAI SDK: `npm install openai`
+2. Set up environment variables in .env.local:
+   ```
+   OPENAI_API_KEY=your-api-key
+   ```
+3. Create a utility function in lib/openai.ts for API calls:
+   ```typescript
+   import OpenAI from 'openai';
+   
+   const openai = new OpenAI({
+     apiKey: process.env.OPENAI_API_KEY
+   });
+   
+   export async function generateQuiz(topic: string, skillLevel: string) {
+     const response = await openai.chat.completions.create({
+       model: 'gpt-4o-mini',
+       messages: [
+         {
+           role: 'system',
+           content: 'You are an educational quiz generator. Create a quiz based on the topic and skill level provided.'
+         },
+         {
+           role: 'user',
+           content: `Generate a quiz on ${topic} for ${skillLevel} skill level. Include 5-8 multiple-choice or short-answer questions. Format as JSON with questions, options, and correct answers.`
+         }
+       ],
+       response_format: { type: 'json_object' }
+     });
+     
+     return JSON.parse(response.choices[0].message.content);
+   }
+   
+   export async function generateFeedback(quizResults: any) {
+     const response = await openai.chat.completions.create({
+       model: 'gpt-4o-mini',
+       messages: [
+         {
+           role: 'system',
+           content: 'You are an empathetic educational assistant. Provide personalized feedback based on quiz results.'
+         },
+         {
+           role: 'user',
+           content: `Generate personalized focus recommendations based on these quiz results: ${JSON.stringify(quizResults)}. Be empathetic, adaptive in tone, and provide actionable advice.`
+         }
+       ]
+     });
+     
+     return response.choices[0].message.content;
+   }
+   ```
+4. Create an API route in app/api/quiz/route.ts to handle quiz generation
+5. Create an API route in app/api/feedback/route.ts to handle feedback generation
+6. Implement error handling and rate limiting for API calls
+7. Set up caching for common quiz topics to reduce API usage
+
+# Test Strategy:
+1. Test quiz generation with various topics and skill levels
+2. Verify that the generated quizzes follow the required format
+3. Test feedback generation with different quiz results
+4. Validate error handling for API failures
+5. Measure response times and optimize if necessary
+6. Test caching mechanism for repeated topics

@@ -1,0 +1,294 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Setup Next.js 15 Project with Tailwind CSS",
+        "description": "Initialize the project repository with Next.js 15 using App Router and configure Tailwind CSS for styling.",
+        "details": "1. Create a new Next.js project using `npx create-next-app@latest edubot-ai`\n2. Select the following options during setup:\n   - Use TypeScript: Yes\n   - Use ESLint: Yes\n   - Use Tailwind CSS: Yes\n   - Use App Router: Yes\n   - Import alias: Yes (use @/ as the default)\n3. Set up project structure with the following directories:\n   - app/ (for App Router pages)\n   - components/ (for reusable UI components)\n   - lib/ (for utility functions)\n   - styles/ (for global styles)\n4. Configure Tailwind CSS with a custom theme that matches the product branding\n5. Set up basic layout components (Header, Footer, Layout)\n6. Configure ESLint and Prettier for code quality\n7. Set up Git repository and initial commit",
+        "testStrategy": "1. Verify that the Next.js application runs without errors using `npm run dev`\n2. Confirm that Tailwind CSS is properly configured by testing a few utility classes\n3. Ensure the project structure follows best practices for Next.js 15 App Router\n4. Validate that ESLint and Prettier are working correctly",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Integrate Clerk Authentication",
+        "description": "Set up Clerk for user authentication, including sign-up, sign-in, and session management.",
+        "details": "1. Install Clerk SDK: `npm install @clerk/nextjs`\n2. Create a Clerk account and set up a new application\n3. Configure environment variables in .env.local:\n   ```\n   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...\n   CLERK_SECRET_KEY=sk_...\n   ```\n4. Wrap the application with ClerkProvider in app/layout.tsx\n5. Create middleware.ts to protect routes:\n   ```typescript\n   import { authMiddleware } from '@clerk/nextjs';\n   export default authMiddleware({\n     publicRoutes: ['/', '/api/webhook/clerk']\n   });\n   export const config = {\n     matcher: ['/((?!.*\\\\..*|_next).*)', '/', '/(api|trpc)(.*)'],\n   };\n   ```\n6. Implement sign-up and sign-in pages using Clerk components\n7. Create user onboarding flow after successful sign-up\n8. Set up webhook to track user events in Supabase",
+        "testStrategy": "1. Test user registration flow with valid and invalid inputs\n2. Verify sign-in functionality with correct and incorrect credentials\n3. Confirm that protected routes redirect unauthenticated users\n4. Test session persistence across page refreshes\n5. Validate that user data is correctly stored in Clerk and synced to Supabase",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "Set Up Supabase with Drizzle ORM",
+        "description": "Configure Supabase PostgreSQL database and set up Drizzle ORM for database operations.",
+        "details": "1. Create a Supabase project\n2. Install required packages: `npm install @supabase/supabase-js drizzle-orm pg`\n3. Install dev dependencies: `npm install -D drizzle-kit @types/pg`\n4. Set up environment variables in .env.local:\n   ```\n   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co\n   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key\n   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key\n   ```\n5. Create database schema using Drizzle in lib/db/schema.ts:\n   ```typescript\n   import { pgTable, serial, text, timestamp, integer, boolean } from 'drizzle-orm/pg-core';\n   \n   export const users = pgTable('users', {\n     id: text('id').primaryKey(), // Clerk user ID\n     email: text('email').notNull(),\n     createdAt: timestamp('created_at').defaultNow().notNull(),\n     updatedAt: timestamp('updated_at').defaultNow().notNull(),\n     quizzesRemaining: integer('quizzes_remaining').default(5).notNull(),\n     isPaid: boolean('is_paid').default(false).notNull(),\n     trialExpiresAt: timestamp('trial_expires_at')\n   });\n   \n   export const quizzes = pgTable('quizzes', {\n     id: serial('id').primaryKey(),\n     userId: text('user_id').notNull().references(() => users.id),\n     topic: text('topic').notNull(),\n     skillLevel: text('skill_level').notNull(),\n     createdAt: timestamp('created_at').defaultNow().notNull(),\n     score: integer('score'),\n     recommendation: text('recommendation')\n   });\n   \n   export const questions = pgTable('questions', {\n     id: serial('id').primaryKey(),\n     quizId: integer('quiz_id').notNull().references(() => quizzes.id),\n     question: text('question').notNull(),\n     options: text('options').array(),\n     correctAnswer: text('correct_answer').notNull(),\n     userAnswer: text('user_answer'),\n     isCorrect: boolean('is_correct')\n   });\n   \n   export const templates = pgTable('templates', {\n     id: serial('id').primaryKey(),\n     topic: text('topic').notNull(),\n     skillLevel: text('skill_level').notNull(),\n     questions: text('questions').array().notNull()\n   });\n   ```\n6. Create a Drizzle config file (drizzle.config.ts)\n7. Set up database client in lib/db/index.ts\n8. Create migration script and run initial migration",
+        "testStrategy": "1. Verify database connection using a simple query\n2. Test schema creation with Drizzle migrations\n3. Validate that all tables are created correctly in Supabase\n4. Create test data and verify CRUD operations using Drizzle ORM\n5. Test foreign key constraints and relationships between tables",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "Implement OpenAI Integration",
+        "description": "Set up OpenAI GPT-4o mini API integration for quiz generation and feedback.",
+        "details": "1. Install OpenAI SDK: `npm install openai`\n2. Set up environment variables in .env.local:\n   ```\n   OPENAI_API_KEY=your-api-key\n   ```\n3. Create a utility function in lib/openai.ts for API calls:\n   ```typescript\n   import OpenAI from 'openai';\n   \n   const openai = new OpenAI({\n     apiKey: process.env.OPENAI_API_KEY\n   });\n   \n   export async function generateQuiz(topic: string, skillLevel: string) {\n     const response = await openai.chat.completions.create({\n       model: 'gpt-4o-mini',\n       messages: [\n         {\n           role: 'system',\n           content: 'You are an educational quiz generator. Create a quiz based on the topic and skill level provided.'\n         },\n         {\n           role: 'user',\n           content: `Generate a quiz on ${topic} for ${skillLevel} skill level. Include 5-8 multiple-choice or short-answer questions. Format as JSON with questions, options, and correct answers.`\n         }\n       ],\n       response_format: { type: 'json_object' }\n     });\n     \n     return JSON.parse(response.choices[0].message.content);\n   }\n   \n   export async function generateFeedback(quizResults: any) {\n     const response = await openai.chat.completions.create({\n       model: 'gpt-4o-mini',\n       messages: [\n         {\n           role: 'system',\n           content: 'You are an empathetic educational assistant. Provide personalized feedback based on quiz results.'\n         },\n         {\n           role: 'user',\n           content: `Generate personalized focus recommendations based on these quiz results: ${JSON.stringify(quizResults)}. Be empathetic, adaptive in tone, and provide actionable advice.`\n         }\n       ]\n     });\n     \n     return response.choices[0].message.content;\n   }\n   ```\n4. Create an API route in app/api/quiz/route.ts to handle quiz generation\n5. Create an API route in app/api/feedback/route.ts to handle feedback generation\n6. Implement error handling and rate limiting for API calls\n7. Set up caching for common quiz topics to reduce API usage",
+        "testStrategy": "1. Test quiz generation with various topics and skill levels\n2. Verify that the generated quizzes follow the required format\n3. Test feedback generation with different quiz results\n4. Validate error handling for API failures\n5. Measure response times and optimize if necessary\n6. Test caching mechanism for repeated topics",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Create Topic Input and Skill Level Selection UI",
+        "description": "Develop the user interface for topic input and skill level selection.",
+        "details": "1. Create a new page component in app/quiz/new/page.tsx\n2. Design a form with the following components:\n   - Text input field for topic entry\n   - Radio buttons or dropdown for skill level selection (Beginner, Intermediate, Advanced)\n   - Submit button to generate quiz\n3. Implement form validation:\n   - Topic field is required and must be at least 3 characters\n   - Skill level selection is required\n4. Add loading state for form submission\n5. Implement error handling for form submission failures\n6. Create a responsive design that works well on mobile and desktop\n7. Add autocomplete suggestions for common topics\n8. Include a brief explanation of how the quiz generation works",
+        "testStrategy": "1. Test form submission with valid and invalid inputs\n2. Verify that validation errors are displayed correctly\n3. Test loading states during form submission\n4. Confirm that the form is responsive across different screen sizes\n5. Test autocomplete functionality for topic suggestions\n6. Validate that the form data is correctly passed to the API",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Implement Quiz Generation Logic",
+        "description": "Develop the backend logic to generate quizzes using templates and OpenAI.",
+        "details": "1. Create a service in lib/services/quiz-service.ts to handle quiz generation:\n   ```typescript\n   import { db } from '@/lib/db';\n   import { quizzes, questions, templates } from '@/lib/db/schema';\n   import { generateQuiz as generateQuizWithAI } from '@/lib/openai';\n   import { eq, and } from 'drizzle-orm';\n   \n   export async function generateQuiz(userId: string, topic: string, skillLevel: string) {\n     // Check if template exists for this topic and skill level\n     const existingTemplates = await db.select()\n       .from(templates)\n       .where(and(\n         eq(templates.topic, topic.toLowerCase()),\n         eq(templates.skillLevel, skillLevel.toLowerCase())\n       ))\n       .limit(1);\n     \n     let quizData;\n     \n     if (existingTemplates.length > 0) {\n       // Use template to generate quiz\n       const template = existingTemplates[0];\n       quizData = {\n         questions: template.questions.map(q => JSON.parse(q))\n       };\n     } else {\n       // Use OpenAI to generate quiz\n       quizData = await generateQuizWithAI(topic, skillLevel);\n       \n       // Optionally save as new template if it's a common topic\n       // This would require additional logic to determine \"common\" topics\n     }\n     \n     // Create quiz record\n     const [newQuiz] = await db.insert(quizzes)\n       .values({\n         userId,\n         topic,\n         skillLevel\n       })\n       .returning();\n     \n     // Create question records\n     const questionRecords = quizData.questions.map(q => ({\n       quizId: newQuiz.id,\n       question: q.question,\n       options: q.options || null,\n       correctAnswer: q.correctAnswer\n     }));\n     \n     await db.insert(questions).values(questionRecords);\n     \n     return {\n       id: newQuiz.id,\n       questions: quizData.questions\n     };\n   }\n   ```\n2. Create an API endpoint in app/api/quiz/generate/route.ts to handle quiz generation requests\n3. Implement logic to check remaining quizzes in the user's trial\n4. Add logic to decrement the remaining quizzes count after generation\n5. Implement caching for frequently requested topics\n6. Add error handling for failed quiz generation\n7. Set up logging for quiz generation metrics",
+        "testStrategy": "1. Test quiz generation with both template-based and AI-based approaches\n2. Verify that quiz data is correctly stored in the database\n3. Test the trial quota system for free users\n4. Validate error handling for edge cases\n5. Test performance with various topics and skill levels\n6. Verify that caching works correctly for repeated topics",
+        "priority": "high",
+        "dependencies": [
+          3,
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "Develop Quiz UI and Interaction",
+        "description": "Create the user interface for displaying and interacting with quizzes.",
+        "details": "1. Create a new page component in app/quiz/[id]/page.tsx to display the quiz\n2. Implement a Quiz component with the following features:\n   - Display questions one at a time with navigation controls\n   - Support for multiple-choice questions with radio buttons\n   - Support for short-answer questions with text input\n   - Progress indicator showing current question and total questions\n   - Timer (optional) to track quiz duration\n   - Submit button to complete the quiz\n3. Use React Query for state management:\n   ```typescript\n   import { useQuery, useMutation } from '@tanstack/react-query';\n   \n   // Fetch quiz data\n   const { data: quiz, isLoading } = useQuery({\n     queryKey: ['quiz', quizId],\n     queryFn: () => fetch(`/api/quiz/${quizId}`).then(res => res.json())\n   });\n   \n   // Submit answer\n   const submitAnswer = useMutation({\n     mutationFn: (answer) => fetch(`/api/quiz/${quizId}/answer`, {\n       method: 'POST',\n       headers: { 'Content-Type': 'application/json' },\n       body: JSON.stringify(answer)\n     }).then(res => res.json())\n   });\n   ```\n4. Implement client-side validation for answers\n5. Add animations for transitions between questions\n6. Create a responsive design that works well on mobile and desktop\n7. Implement keyboard shortcuts for navigation and answer selection\n8. Add confirmation dialog before quiz submission",
+        "testStrategy": "1. Test quiz rendering with different question types\n2. Verify that answer submission works correctly\n3. Test navigation between questions\n4. Validate that the quiz state is maintained correctly\n5. Test responsive design on different screen sizes\n6. Verify that keyboard shortcuts work as expected\n7. Test quiz completion and submission flow",
+        "priority": "high",
+        "dependencies": [
+          5,
+          6
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "Implement Quiz Scoring and Feedback Generation",
+        "description": "Develop the logic for scoring quizzes and generating personalized feedback.",
+        "details": "1. Create a service in lib/services/scoring-service.ts to handle quiz scoring:\n   ```typescript\n   import { db } from '@/lib/db';\n   import { quizzes, questions } from '@/lib/db/schema';\n   import { generateFeedback } from '@/lib/openai';\n   import { eq } from 'drizzle-orm';\n   \n   export async function scoreQuiz(quizId: number, answers: Record<number, string>) {\n     // Fetch quiz questions with correct answers\n     const quizQuestions = await db.select()\n       .from(questions)\n       .where(eq(questions.quizId, quizId));\n     \n     // Score each question\n     let correctCount = 0;\n     const scoredQuestions = [];\n     \n     for (const question of quizQuestions) {\n       const userAnswer = answers[question.id];\n       const isCorrect = userAnswer?.toLowerCase() === question.correctAnswer.toLowerCase();\n       \n       if (isCorrect) correctCount++;\n       \n       // Update question with user's answer and score\n       await db.update(questions)\n         .set({\n           userAnswer,\n           isCorrect\n         })\n         .where(eq(questions.id, question.id));\n       \n       scoredQuestions.push({\n         ...question,\n         userAnswer,\n         isCorrect\n       });\n     }\n     \n     // Calculate score percentage\n     const score = Math.round((correctCount / quizQuestions.length) * 100);\n     \n     // Generate personalized feedback\n     const quizData = await db.select().from(quizzes).where(eq(quizzes.id, quizId)).limit(1);\n     const quiz = quizData[0];\n     \n     const feedbackData = {\n       topic: quiz.topic,\n       skillLevel: quiz.skillLevel,\n       score,\n       questions: scoredQuestions.map(q => ({\n         question: q.question,\n         correctAnswer: q.correctAnswer,\n         userAnswer: q.userAnswer,\n         isCorrect: q.isCorrect\n       }))\n     };\n     \n     const recommendation = await generateFeedback(feedbackData);\n     \n     // Update quiz with score and recommendation\n     await db.update(quizzes)\n       .set({\n         score,\n         recommendation\n       })\n       .where(eq(quizzes.id, quizId));\n     \n     return {\n       score,\n       recommendation,\n       questions: scoredQuestions\n     };\n   }\n   ```\n2. Create an API endpoint in app/api/quiz/[id]/score/route.ts to handle quiz scoring requests\n3. Implement logic to compare user answers with correct answers\n4. Add support for partial matching in short-answer questions\n5. Implement feedback generation based on quiz results\n6. Add error handling for failed scoring or feedback generation\n7. Set up logging for scoring metrics",
+        "testStrategy": "1. Test scoring with various answer combinations\n2. Verify that partial matching works correctly for short-answer questions\n3. Test feedback generation with different quiz results\n4. Validate that quiz data is correctly updated in the database\n5. Test error handling for edge cases\n6. Verify that the scoring is accurate across different question types",
+        "priority": "high",
+        "dependencies": [
+          6,
+          7
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Create Results and Feedback UI",
+        "description": "Develop the user interface for displaying quiz results and personalized feedback.",
+        "details": "1. Create a new page component in app/quiz/[id]/results/page.tsx to display quiz results\n2. Implement a Results component with the following features:\n   - Display overall score with visual indicator (e.g., progress circle)\n   - Show correct and incorrect answers for each question\n   - Display personalized focus recommendation\n   - Provide option to retake quiz or start a new quiz\n   - Share results functionality (optional)\n3. Style the feedback section to be visually appealing and easy to read\n4. Add animations for revealing results\n5. Implement a responsive design that works well on mobile and desktop\n6. Add a call-to-action for free users to upgrade to paid plan\n7. Include social proof or testimonials about the effectiveness of the feedback",
+        "testStrategy": "1. Test results rendering with different score scenarios\n2. Verify that feedback is displayed correctly\n3. Test responsive design on different screen sizes\n4. Validate that the call-to-action for upgrading works correctly\n5. Test navigation to retake quiz or start new quiz\n6. Verify that all quiz data is correctly displayed",
+        "priority": "high",
+        "dependencies": [
+          7,
+          8
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Implement Stripe Integration for Payments",
+        "description": "Set up Stripe for handling payments and subscriptions.",
+        "details": "1. Install Stripe SDK: `npm install stripe @stripe/stripe-js`\n2. Set up environment variables in .env.local:\n   ```\n   STRIPE_SECRET_KEY=sk_...\n   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_...\n   STRIPE_WEBHOOK_SECRET=whsec_...\n   ```\n3. Create a Stripe client in lib/stripe.ts:\n   ```typescript\n   import Stripe from 'stripe';\n   \n   export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {\n     apiVersion: '2023-10-16',\n     appInfo: {\n       name: 'EduBot AI',\n       version: '1.0.0'\n     }\n   });\n   ```\n4. Create API routes for payment handling:\n   - app/api/stripe/create-checkout/route.ts for creating checkout sessions\n   - app/api/stripe/webhook/route.ts for handling webhooks\n5. Set up product and price in Stripe dashboard:\n   - Monthly subscription option\n   - One-time payment option\n6. Implement checkout flow:\n   ```typescript\n   export async function createCheckoutSession(userId: string, priceId: string) {\n     const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);\n     \n     if (!user[0]) throw new Error('User not found');\n     \n     const session = await stripe.checkout.sessions.create({\n       customer_email: user[0].email,\n       line_items: [\n         {\n           price: priceId,\n           quantity: 1\n         }\n       ],\n       mode: priceId.includes('one_time') ? 'payment' : 'subscription',\n       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,\n       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/payment/canceled`,\n       metadata: {\n         userId\n       }\n     });\n     \n     return session;\n   }\n   ```\n7. Implement webhook handler to update user status after successful payment\n8. Add error handling for payment failures",
+        "testStrategy": "1. Test checkout flow with test cards in Stripe test mode\n2. Verify that webhook handling correctly updates user status\n3. Test both subscription and one-time payment options\n4. Validate error handling for payment failures\n5. Test checkout session expiration handling\n6. Verify that users can access premium features after successful payment",
+        "priority": "high",
+        "dependencies": [
+          2,
+          3
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 11,
+        "title": "Create Paywall and Subscription UI",
+        "description": "Develop the user interface for the paywall and subscription options.",
+        "details": "1. Create a new page component in app/upgrade/page.tsx for the paywall\n2. Implement a Pricing component with the following features:\n   - Display monthly subscription option\n   - Display one-time payment option\n   - Highlight benefits of paid plan\n   - Show comparison between free and paid plans\n   - Include testimonials or social proof\n3. Create a checkout button that initiates the Stripe checkout flow:\n   ```typescript\n   import { loadStripe } from '@stripe/stripe-js';\n   \n   const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);\n   \n   export function CheckoutButton({ priceId, userId }) {\n     const handleCheckout = async () => {\n       try {\n         const response = await fetch('/api/stripe/create-checkout', {\n           method: 'POST',\n           headers: { 'Content-Type': 'application/json' },\n           body: JSON.stringify({ priceId, userId })\n         });\n         \n         const { sessionId } = await response.json();\n         const stripe = await stripePromise;\n         await stripe?.redirectToCheckout({ sessionId });\n       } catch (error) {\n         console.error('Error during checkout:', error);\n       }\n     };\n     \n     return (\n       <button onClick={handleCheckout}>\n         Upgrade Now\n       </button>\n     );\n   }\n   ```\n4. Implement success and canceled payment pages\n5. Add animations and visual appeal to the pricing page\n6. Implement responsive design for mobile and desktop\n7. Add FAQ section addressing common questions about pricing",
+        "testStrategy": "1. Test rendering of pricing options\n2. Verify that checkout button initiates Stripe checkout\n3. Test responsive design on different screen sizes\n4. Validate that success and canceled payment pages work correctly\n5. Test navigation between pricing options\n6. Verify that all pricing information is clearly displayed",
+        "priority": "high",
+        "dependencies": [
+          10
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 12,
+        "title": "Implement Trial Management System",
+        "description": "Develop the logic for managing free trial usage and expiration.",
+        "details": "1. Create a service in lib/services/trial-service.ts to handle trial management:\n   ```typescript\n   import { db } from '@/lib/db';\n   import { users } from '@/lib/db/schema';\n   import { eq } from 'drizzle-orm';\n   import { addDays } from 'date-fns';\n   \n   export async function initializeTrial(userId: string) {\n     const trialExpiresAt = addDays(new Date(), 3); // 3-day trial\n     \n     await db.update(users)\n       .set({\n         quizzesRemaining: 5,\n         trialExpiresAt\n       })\n       .where(eq(users.id, userId));\n     \n     return { quizzesRemaining: 5, trialExpiresAt };\n   }\n   \n   export async function decrementQuizCount(userId: string) {\n     const user = await db.select()\n       .from(users)\n       .where(eq(users.id, userId))\n       .limit(1);\n     \n     if (!user[0]) throw new Error('User not found');\n     \n     // If user is paid, don't decrement\n     if (user[0].isPaid) return { quizzesRemaining: Infinity };\n     \n     // If trial expired, return 0\n     if (user[0].trialExpiresAt && new Date() > new Date(user[0].trialExpiresAt)) {\n       return { quizzesRemaining: 0 };\n     }\n     \n     // Decrement quiz count, minimum 0\n     const quizzesRemaining = Math.max(0, (user[0].quizzesRemaining || 0) - 1);\n     \n     await db.update(users)\n       .set({ quizzesRemaining })\n       .where(eq(users.id, userId));\n     \n     return { quizzesRemaining };\n   }\n   \n   export async function checkTrialStatus(userId: string) {\n     const user = await db.select()\n       .from(users)\n       .where(eq(users.id, userId))\n       .limit(1);\n     \n     if (!user[0]) throw new Error('User not found');\n     \n     // If user is paid, they have unlimited quizzes\n     if (user[0].isPaid) return { quizzesRemaining: Infinity, isActive: true };\n     \n     // Check if trial has expired\n     const isExpired = user[0].trialExpiresAt && new Date() > new Date(user[0].trialExpiresAt);\n     const quizzesRemaining = isExpired ? 0 : user[0].quizzesRemaining || 0;\n     \n     return {\n       quizzesRemaining,\n       isActive: quizzesRemaining > 0 && !isExpired\n     };\n   }\n   ```\n2. Create API endpoints to check trial status and initialize trial\n3. Implement middleware to check trial status before quiz generation\n4. Add logic to redirect to paywall when trial is expired or quota is reached\n5. Implement countdown display for remaining quizzes\n6. Add notifications when trial is about to expire\n7. Set up automatic trial initialization for new users",
+        "testStrategy": "1. Test trial initialization for new users\n2. Verify that quiz count decrements correctly after each quiz\n3. Test trial expiration based on date\n4. Validate that paid users have unlimited quizzes\n5. Test redirection to paywall when trial expires\n6. Verify that notifications are displayed correctly",
+        "priority": "high",
+        "dependencies": [
+          2,
+          3,
+          6
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 13,
+        "title": "Integrate Plunk for Email Notifications",
+        "description": "Set up Plunk for sending email notifications to users.",
+        "details": "1. Install Plunk SDK: `npm install @plunk/node`\n2. Set up environment variables in .env.local:\n   ```\n   PLUNK_API_KEY=your-api-key\n   PLUNK_API_SECRET=your-api-secret\n   ```\n3. Create a Plunk client in lib/plunk.ts:\n   ```typescript\n   import { Plunk } from '@plunk/node';\n   \n   export const plunk = new Plunk({\n     apiKey: process.env.PLUNK_API_KEY!,\n     apiSecret: process.env.PLUNK_API_SECRET!\n   });\n   ```\n4. Create email templates for:\n   - Welcome email after sign-up\n   - Trial expiration reminder\n   - Payment confirmation\n   - Quiz completion summary\n5. Implement email sending functions:\n   ```typescript\n   export async function sendWelcomeEmail(email: string, name: string) {\n     return plunk.emails.send({\n       to: email,\n       subject: 'Welcome to EduBot AI!',\n       body: `<h1>Welcome to EduBot AI, ${name}!</h1><p>Start your learning journey today with our AI-powered quizzes.</p>`,\n     });\n   }\n   \n   export async function sendTrialExpirationEmail(email: string, name: string) {\n     return plunk.emails.send({\n       to: email,\n       subject: 'Your EduBot AI Trial is Ending Soon',\n       body: `<h1>Your trial is ending soon, ${name}!</h1><p>Upgrade now to continue your learning journey.</p>`,\n     });\n   }\n   ```\n6. Set up webhook handlers for email events (opens, clicks, etc.)\n7. Implement scheduled emails for trial expiration reminders",
+        "testStrategy": "1. Test email sending for each template\n2. Verify that emails are correctly formatted and personalized\n3. Test webhook handling for email events\n4. Validate that scheduled emails are sent at the correct time\n5. Test email rendering across different email clients\n6. Verify that unsubscribe links work correctly",
+        "priority": "medium",
+        "dependencies": [
+          2,
+          12
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 14,
+        "title": "Set Up Analytics and Error Tracking",
+        "description": "Integrate Plausible for analytics and Sentry for error tracking.",
+        "details": "1. Set up Plausible Analytics:\n   - Create a Plausible account and set up a new site\n   - Add the Plausible script to app/layout.tsx:\n   ```jsx\n   <Script\n     defer\n     data-domain=\"your-domain.com\"\n     src=\"https://plausible.io/js/script.js\"\n   />\n   ```\n   - Configure custom events for important user actions\n2. Set up Sentry for error tracking:\n   - Install Sentry SDK: `npm install @sentry/nextjs`\n   - Initialize Sentry in next.config.js:\n   ```javascript\n   const { withSentryConfig } = require('@sentry/nextjs');\n   \n   const nextConfig = {\n     // your existing config\n   };\n   \n   module.exports = withSentryConfig(\n     nextConfig,\n     {\n       silent: true,\n       org: \"your-org\",\n       project: \"edubot-ai\",\n     },\n     {\n       widenClientFileUpload: true,\n       transpileClientSDK: true,\n       tunnelRoute: \"/monitoring\",\n       hideSourceMaps: true,\n       disableLogger: true,\n     }\n   );\n   ```\n   - Create sentry.client.config.js and sentry.server.config.js files\n   - Set up environment variables for Sentry\n3. Implement custom error boundaries for graceful error handling\n4. Set up performance monitoring for critical paths\n5. Create custom analytics events for key user actions:\n   - Quiz generation\n   - Quiz completion\n   - Payment conversion\n   - Trial expiration\n6. Implement hCaptcha for spam protection on sign-up and quiz generation",
+        "testStrategy": "1. Verify that Plausible is correctly tracking page views\n2. Test custom event tracking for key user actions\n3. Validate that Sentry captures and reports errors\n4. Test error boundaries with simulated errors\n5. Verify that performance monitoring is working\n6. Test hCaptcha integration for spam protection",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 15,
+        "title": "Deploy Application to Vercel",
+        "description": "Set up deployment pipeline and deploy the application to Vercel.",
+        "details": "1. Create a Vercel account and connect it to the GitHub repository\n2. Configure environment variables in Vercel:\n   - Database connection details\n   - API keys for all services\n   - Other configuration variables\n3. Set up deployment settings:\n   - Production branch: main\n   - Preview deployments for pull requests\n   - Environment variables for different environments\n4. Configure build settings:\n   - Build command: `npm run build`\n   - Output directory: `.next`\n   - Install command: `npm ci`\n5. Set up custom domains and SSL certificates\n6. Configure serverless function settings\n7. Set up monitoring and alerts for deployment failures\n8. Implement continuous integration with GitHub Actions:\n   - Linting and type checking\n   - Unit and integration tests\n   - Preview deployments for pull requests",
+        "testStrategy": "1. Test deployment process with a staging environment\n2. Verify that all environment variables are correctly set\n3. Test serverless functions in the deployed environment\n4. Validate that custom domains and SSL certificates are working\n5. Test the application's performance in production\n6. Verify that monitoring and alerts are working\n7. Test rollback procedures for failed deployments",
+        "priority": "high",
+        "dependencies": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 16,
+        "title": "Implement On-Demand AI Explanations Feature",
+        "description": "Create a feature that allows users to ask the AI for explanations of any topic or concept they don't understand, providing clear, tailored explanations in simple language.",
+        "details": "1. Create a new component in app/components/ExplanationDialog.tsx:\n   ```typescript\n   import { useState } from 'react';\n   import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';\n   import { Button } from '@/components/ui/button';\n   import { Textarea } from '@/components/ui/textarea';\n   import { Loader2 } from 'lucide-react';\n   \n   export function ExplanationDialog({ open, onOpenChange }) {\n     const [question, setQuestion] = useState('');\n     const [explanation, setExplanation] = useState('');\n     const [isLoading, setIsLoading] = useState(false);\n     \n     async function handleSubmit(e) {\n       e.preventDefault();\n       setIsLoading(true);\n       \n       try {\n         const response = await fetch('/api/explanations', {\n           method: 'POST',\n           headers: { 'Content-Type': 'application/json' },\n           body: JSON.stringify({ question })\n         });\n         \n         if (!response.ok) throw new Error('Failed to get explanation');\n         \n         const data = await response.json();\n         setExplanation(data.explanation);\n       } catch (error) {\n         console.error('Error getting explanation:', error);\n       } finally {\n         setIsLoading(false);\n       }\n     }\n     \n     return (\n       <Dialog open={open} onOpenChange={onOpenChange}>\n         <DialogContent className=\"sm:max-w-[600px]\">\n           <DialogHeader>\n             <DialogTitle>Ask for an Explanation</DialogTitle>\n           </DialogHeader>\n           <form onSubmit={handleSubmit}>\n             <Textarea \n               placeholder=\"What would you like explained? (e.g., 'What are components in React?')\"\n               value={question}\n               onChange={(e) => setQuestion(e.target.value)}\n               className=\"min-h-[100px]\"\n             />\n             <Button type=\"submit\" className=\"mt-4\" disabled={isLoading || !question.trim()}>\n               {isLoading ? (\n                 <>\n                   <Loader2 className=\"mr-2 h-4 w-4 animate-spin\" />\n                   Getting explanation...\n                 </>\n               ) : 'Get Explanation'}\n             </Button>\n           </form>\n           \n           {explanation && (\n             <div className=\"mt-4 p-4 bg-muted rounded-md\">\n               <h3 className=\"font-medium mb-2\">Explanation:</h3>\n               <div className=\"whitespace-pre-wrap\">{explanation}</div>\n             </div>\n           )}\n         </DialogContent>\n       </Dialog>\n     );\n   }\n   ```\n\n2. Add a floating action button to the layout in app/dashboard/layout.tsx:\n   ```typescript\n   import { ExplanationButton } from '@/components/ExplanationButton';\n   \n   export default function DashboardLayout({ children }) {\n     return (\n       <div className=\"relative min-h-screen\">\n         {children}\n         <ExplanationButton />\n       </div>\n     );\n   }\n   ```\n\n3. Create the ExplanationButton component in app/components/ExplanationButton.tsx:\n   ```typescript\n   import { useState } from 'react';\n   import { Button } from '@/components/ui/button';\n   import { HelpCircle } from 'lucide-react';\n   import { ExplanationDialog } from './ExplanationDialog';\n   \n   export function ExplanationButton() {\n     const [dialogOpen, setDialogOpen] = useState(false);\n     \n     return (\n       <>\n         <Button\n           onClick={() => setDialogOpen(true)}\n           className=\"fixed bottom-6 right-6 rounded-full h-14 w-14 shadow-lg\"\n           size=\"icon\"\n           variant=\"default\"\n         >\n           <HelpCircle className=\"h-6 w-6\" />\n         </Button>\n         <ExplanationDialog open={dialogOpen} onOpenChange={setDialogOpen} />\n       </>\n     );\n   }\n   ```\n\n4. Create an API endpoint for explanations in app/api/explanations/route.ts:\n   ```typescript\n   import { NextResponse } from 'next/server';\n   import { auth } from '@clerk/nextjs';\n   import { generateExplanation } from '@/lib/openai';\n   \n   export async function POST(req: Request) {\n     try {\n       const { userId } = auth();\n       if (!userId) {\n         return new NextResponse('Unauthorized', { status: 401 });\n       }\n       \n       const { question } = await req.json();\n       if (!question || typeof question !== 'string') {\n         return new NextResponse('Invalid request', { status: 400 });\n       }\n       \n       const explanation = await generateExplanation(question);\n       \n       return NextResponse.json({ explanation });\n     } catch (error) {\n       console.error('Explanation error:', error);\n       return new NextResponse('Internal error', { status: 500 });\n     }\n   }\n   ```\n\n5. Add the explanation generation function to lib/openai.ts:\n   ```typescript\n   export async function generateExplanation(question: string) {\n     const response = await openai.chat.completions.create({\n       model: 'gpt-4o-mini',\n       messages: [\n         {\n           role: 'system',\n           content: 'You are a helpful educational assistant. Provide clear, concise explanations of concepts in simple language. Use analogies and examples where appropriate. Keep explanations under 300 words unless the topic requires more detail.'\n         },\n         {\n           role: 'user',\n           content: question\n         }\n       ],\n       temperature: 0.7,\n       max_tokens: 1000\n     });\n     \n     return response.choices[0].message.content;\n   }\n   ```\n\n6. Update the user interface to include a help icon in the navigation bar as an alternative entry point:\n   ```typescript\n   // In app/components/Navbar.tsx\n   import { HelpCircle } from 'lucide-react';\n   import { Button } from '@/components/ui/button';\n   import { useState } from 'react';\n   import { ExplanationDialog } from './ExplanationDialog';\n   \n   export function Navbar() {\n     const [dialogOpen, setDialogOpen] = useState(false);\n     \n     return (\n       <nav className=\"border-b py-4\">\n         <div className=\"container flex justify-between items-center\">\n           <Logo />\n           <div className=\"flex items-center gap-4\">\n             <Button\n               onClick={() => setDialogOpen(true)}\n               variant=\"ghost\"\n               size=\"icon\"\n             >\n               <HelpCircle className=\"h-5 w-5\" />\n             </Button>\n             {/* Other navbar items */}\n           </div>\n         </div>\n         <ExplanationDialog open={dialogOpen} onOpenChange={setDialogOpen} />\n       </nav>\n     );\n   }\n   ```\n\n7. Add usage tracking to monitor API usage:\n   ```typescript\n   // In lib/openai.ts\n   import { db } from '@/lib/db';\n   import { explanationLogs } from '@/lib/db/schema';\n   \n   export async function generateExplanation(question: string, userId: string) {\n     const startTime = Date.now();\n     \n     const response = await openai.chat.completions.create({\n       // ... existing configuration\n     });\n     \n     const explanation = response.choices[0].message.content;\n     const tokensUsed = response.usage?.total_tokens || 0;\n     \n     // Log the explanation request\n     await db.insert(explanationLogs).values({\n       userId,\n       question,\n       tokensUsed,\n       timestamp: new Date(),\n       responseTime: Date.now() - startTime\n     });\n     \n     return explanation;\n   }\n   ```\n\n8. Add a new table to the database schema in lib/db/schema.ts:\n   ```typescript\n   export const explanationLogs = pgTable('explanation_logs', {\n     id: serial('id').primaryKey(),\n     userId: text('user_id').notNull(),\n     question: text('question').notNull(),\n     tokensUsed: integer('tokens_used').notNull(),\n     timestamp: timestamp('timestamp').notNull().defaultNow(),\n     responseTime: integer('response_time').notNull()\n   });\n   ```",
+        "testStrategy": "1. Test the explanation dialog UI:\n   - Verify that the dialog opens correctly from both the floating button and navbar icon\n   - Test responsive design on different screen sizes\n   - Ensure the dialog closes properly\n   - Validate form validation for empty questions\n\n2. Test the explanation generation API:\n   - Test with various types of questions (technical, non-technical, short, long)\n   - Verify that explanations are clear and tailored to the question\n   - Test with edge cases like very complex topics or ambiguous questions\n   - Validate error handling for API failures\n   - Test authentication requirements\n\n3. Test integration with OpenAI:\n   - Verify that the correct model and parameters are being used\n   - Test response formatting and handling\n   - Validate token usage tracking\n   - Test error handling for rate limits or API downtime\n\n4. Test performance:\n   - Measure response times for different types of questions\n   - Test under load with multiple concurrent requests\n   - Verify that the UI shows appropriate loading states\n\n5. Test user experience:\n   - Conduct user testing to ensure explanations are helpful and clear\n   - Verify that the feature is discoverable\n   - Test accessibility of the dialog and buttons\n   - Ensure keyboard navigation works correctly\n\n6. Test database logging:\n   - Verify that explanation requests are correctly logged\n   - Test that all required fields are captured\n   - Validate that token usage is accurately recorded\n\n7. Test across different browsers and devices to ensure consistent functionality.",
+        "status": "pending",
+        "dependencies": [
+          2,
+          4
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create ExplanationDialog and ExplanationButton Components",
+            "description": "Implement the UI components for the explanation feature, including the dialog for asking questions and the floating action button to trigger it.",
+            "dependencies": [],
+            "details": "Create two components: ExplanationDialog.tsx to handle user input and display AI responses, and ExplanationButton.tsx for the floating action button. The dialog should include a textarea for questions, a submit button with loading state, and a section to display the explanation. The button should be positioned in the bottom-right corner of the screen and open the dialog when clicked.",
+            "status": "pending",
+            "testStrategy": "Test component rendering, dialog opening/closing, and form submission behavior using React Testing Library."
+          },
+          {
+            "id": 2,
+            "title": "Implement OpenAI Integration for Explanations",
+            "description": "Create the OpenAI integration function that will generate explanations based on user questions.",
+            "dependencies": [],
+            "details": "Add a generateExplanation function to lib/openai.ts that takes a question string as input and returns an AI-generated explanation. Configure the OpenAI chat completions API with appropriate system prompts to generate educational, clear explanations under 300 words. Use gpt-4o-mini model with temperature 0.7 and max_tokens 1000.",
+            "status": "pending",
+            "testStrategy": "Create mock tests for the OpenAI integration, testing error handling and response formatting."
+          },
+          {
+            "id": 3,
+            "title": "Create API Endpoint for Explanations",
+            "description": "Implement the backend API endpoint that will handle explanation requests and connect to the OpenAI service.",
+            "dependencies": [
+              2
+            ],
+            "details": "Create app/api/explanations/route.ts with a POST handler that validates the user is authenticated using Clerk, extracts the question from the request body, calls the generateExplanation function, and returns the explanation as JSON. Include proper error handling for unauthorized access, invalid requests, and server errors.",
+            "status": "pending",
+            "testStrategy": "Test API endpoint with various inputs including valid questions, missing authentication, and invalid request formats."
+          },
+          {
+            "id": 4,
+            "title": "Integrate Explanation Feature into Application Layout",
+            "description": "Add the explanation button to the dashboard layout and navbar to provide multiple entry points for the feature.",
+            "dependencies": [
+              1
+            ],
+            "details": "Update app/dashboard/layout.tsx to include the ExplanationButton component. Also modify the Navbar component to include a help icon that opens the explanation dialog, providing an alternative way to access the feature. Ensure both implementations correctly manage the dialog's open state.",
+            "status": "pending",
+            "testStrategy": "Test that the button appears in both locations and that clicking either button opens the explanation dialog."
+          },
+          {
+            "id": 5,
+            "title": "Implement Usage Tracking and Database Schema",
+            "description": "Create a database schema for tracking explanation usage and implement logging functionality.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Add an explanationLogs table to the database schema in lib/db/schema.ts with fields for id, userId, question, tokensUsed, timestamp, and responseTime. Update the generateExplanation function to log each request with the user ID, question text, tokens used, timestamp, and response time. Modify the API endpoint to pass the userId to the generateExplanation function.",
+            "status": "pending",
+            "testStrategy": "Test that explanation requests are properly logged to the database with all required fields. Verify that the logs can be queried for usage analysis."
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-06-23T22:43:05.609Z",
+      "updated": "2025-06-24T21:38:48.977Z",
+      "description": "Tasks for master context"
+    }
+  }
+}

@@ -1,0 +1,28 @@
+# Task ID: 5
+# Title: Create Topic Input and Skill Level Selection UI
+# Status: pending
+# Dependencies: 1, 2
+# Priority: medium
+# Description: Develop the user interface for topic input and skill level selection.
+# Details:
+1. Create a new page component in app/quiz/new/page.tsx
+2. Design a form with the following components:
+   - Text input field for topic entry
+   - Radio buttons or dropdown for skill level selection (Beginner, Intermediate, Advanced)
+   - Submit button to generate quiz
+3. Implement form validation:
+   - Topic field is required and must be at least 3 characters
+   - Skill level selection is required
+4. Add loading state for form submission
+5. Implement error handling for form submission failures
+6. Create a responsive design that works well on mobile and desktop
+7. Add autocomplete suggestions for common topics
+8. Include a brief explanation of how the quiz generation works
+
+# Test Strategy:
+1. Test form submission with valid and invalid inputs
+2. Verify that validation errors are displayed correctly
+3. Test loading states during form submission
+4. Confirm that the form is responsive across different screen sizes
+5. Test autocomplete functionality for topic suggestions
+6. Validate that the form data is correctly passed to the API

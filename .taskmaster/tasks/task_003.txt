@@ -1,0 +1,67 @@
+# Task ID: 3
+# Title: Set Up Supabase with Drizzle ORM
+# Status: pending
+# Dependencies: 1
+# Priority: high
+# Description: Configure Supabase PostgreSQL database and set up Drizzle ORM for database operations.
+# Details:
+1. Create a Supabase project
+2. Install required packages: `npm install @supabase/supabase-js drizzle-orm pg`
+3. Install dev dependencies: `npm install -D drizzle-kit @types/pg`
+4. Set up environment variables in .env.local:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+   ```
+5. Create database schema using Drizzle in lib/db/schema.ts:
+   ```typescript
+   import { pgTable, serial, text, timestamp, integer, boolean } from 'drizzle-orm/pg-core';
+   
+   export const users = pgTable('users', {
+     id: text('id').primaryKey(), // Clerk user ID
+     email: text('email').notNull(),
+     createdAt: timestamp('created_at').defaultNow().notNull(),
+     updatedAt: timestamp('updated_at').defaultNow().notNull(),
+     quizzesRemaining: integer('quizzes_remaining').default(5).notNull(),
+     isPaid: boolean('is_paid').default(false).notNull(),
+     trialExpiresAt: timestamp('trial_expires_at')
+   });
+   
+   export const quizzes = pgTable('quizzes', {
+     id: serial('id').primaryKey(),
+     userId: text('user_id').notNull().references(() => users.id),
+     topic: text('topic').notNull(),
+     skillLevel: text('skill_level').notNull(),
+     createdAt: timestamp('created_at').defaultNow().notNull(),
+     score: integer('score'),
+     recommendation: text('recommendation')
+   });
+   
+   export const questions = pgTable('questions', {
+     id: serial('id').primaryKey(),
+     quizId: integer('quiz_id').notNull().references(() => quizzes.id),
+     question: text('question').notNull(),
+     options: text('options').array(),
+     correctAnswer: text('correct_answer').notNull(),
+     userAnswer: text('user_answer'),
+     isCorrect: boolean('is_correct')
+   });
+   
+   export const templates = pgTable('templates', {
+     id: serial('id').primaryKey(),
+     topic: text('topic').notNull(),
+     skillLevel: text('skill_level').notNull(),
+     questions: text('questions').array().notNull()
+   });
+   ```
+6. Create a Drizzle config file (drizzle.config.ts)
+7. Set up database client in lib/db/index.ts
+8. Create migration script and run initial migration
+
+# Test Strategy:
+1. Verify database connection using a simple query
+2. Test schema creation with Drizzle migrations
+3. Validate that all tables are created correctly in Supabase
+4. Create test data and verify CRUD operations using Drizzle ORM
+5. Test foreign key constraints and relationships between tables
